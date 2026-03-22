@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  valm-bot:
+    build: .
+    container_name: valm_discord_bot
+    restart: unless-stopped
+    network_mode: "host" # CỰC KỲ QUAN TRỌNG ĐỂ KẾT NỐI WEBSOCKET HOST
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
