@@ -25,27 +25,35 @@ A powerful and lightweight Discord Bot designed to synchronize the latest news f
 ## 🛠️ Installation
 
 ### Prerequisites
+
 - **Python 3.11+**
 - **Discord Bot Token** ([Discord Developer Portal](https://discord.com/developers/applications))
 - **NVIDIA API Key** ([NVIDIA build](https://build.nvidia.com/google/gemma-3-27b-it))
 
 ### Local Setup
+
 1. Clone the repo:
+
    ```bash
    git clone https://github.com/optimus0701/docker-bili-bot-valm.git
    cd docker-bili-bot-valm
    ```
+
 2. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
+
 3. Create a `.env` file (see [Configuration](#configuration)).
 4. Run the bot:
+
    ```bash
    python bot.py
    ```
 
 ### Docker Setup (Recommended)
+
 ```bash
 # Build the image
 docker build -t optimus0701/bili-bot-valm .
@@ -68,6 +76,8 @@ DISCORD_ROLES_ID=role_id_1,role_id_2  # Roles to ping in Release mode
 
 # --- AI Config ---
 NVIDIA_API_KEY=nvapi-xxxxxx
+AI_MODEL_PREFIXES=qwen/qwen3.5,google/gemma-3    # Priority order for model selection
+VISION_MODEL_PREFIXES=google/gemma-3              # Models supporting image input
 
 # --- Bilibili Config ---
 BILIBILI_UID=3546856908917475  # Valorant Mobile CN Official UID
@@ -101,27 +111,35 @@ Một Discord Bot mạnh mẽ và siêu nhẹ giúp đồng bộ hóa tin tức 
 ## 🛠️ Hướng dẫn cài đặt
 
 ### Yêu cầu
+
 - **Python 3.11+**
 - **Discord Bot Token**
 - **NVIDIA API Key**
 
 ### Cài đặt thủ công
+
 1. Clone dự án:
+
    ```bash
    git clone https://github.com/optimus0701/docker-bili-bot-valm.git
    cd docker-bili-bot-valm
    ```
+
 2. Cài đặt thư viện:
+
    ```bash
    pip install -r requirements.txt
    ```
+
 3. Tạo file `.env` và điền cấu hình.
 4. Chạy bot:
+
    ```bash
    python bot.py
    ```
 
 ### Chạy bằng Docker
+
 ```bash
 docker build -t optimus0701/bili-bot-valm .
 docker run -d --name valo-bot --env-file .env optimus0701/bili-bot-valm

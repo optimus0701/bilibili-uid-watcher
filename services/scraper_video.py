@@ -19,27 +19,23 @@ HEADERS = {
 }
 
 def get_latest_video_cli(uid):
-    """Chỉ dùng CLI để lấy BVID mới nhất"""
-    try:
-        logging.info(f"{C_TAG} 🔍 Đang gọi lệnh bili CLI để lấy bvid video...")
-        result = subprocess.run(['bili', 'user-videos', str(uid), '--max', '1', '--json'], capture_output=True, text=True, check=True)
+    """Chỉ dùng CLI để lấy BVID mới nhất. Trả về dict video, None nếu không có data, hoặc raise Exception nếu lỗi CLI."""
+    logging.info(f"{C_TAG} 🔍 Đang gọi lệnh bili CLI để lấy bvid video...")
+    result = subprocess.run(['bili', 'user-videos', str(uid), '--max', '1', '--json'], capture_output=True, text=True, check=True)
+    
+    if not result.stdout.strip(): return None
         
-        if not result.stdout.strip(): return None
-            
-        data = json.loads(result.stdout)
+    data = json.loads(result.stdout)
 
-        if isinstance(data, list) and len(data) > 0: 
-            return data[0]
-        elif isinstance(data, dict):
-            if 'data' in data and isinstance(data['data'], list) and len(data['data']) > 0:
-                return data['data'][0]
-            elif 'vlist' in data: 
-                return data['vlist'][0] if data['vlist'] else None
-            elif 'list' in data and 'vlist' in data['list']: 
-                return data['list']['vlist'][0] if data['list']['vlist'] else None
-    except Exception as e:
-        logging.error(f"{C_TAG} {C_ERR}Lỗi khi fetch video từ CLI: {e}{C_END}")
-        
+    if isinstance(data, list) and len(data) > 0: 
+        return data[0]
+    elif isinstance(data, dict):
+        if 'data' in data and isinstance(data['data'], list) and len(data['data']) > 0:
+            return data['data'][0]
+        elif 'vlist' in data: 
+            return data['vlist'][0] if data['vlist'] else None
+        elif 'list' in data and 'vlist' in data['list']: 
+            return data['list']['vlist'][0] if data['list']['vlist'] else None
     return None
 
 async def fetch_video_detail(bvid):
@@ -64,7 +60,12 @@ async def check_bilibili_video(bot):
     latest_bvid = state.get("latest_bvid", "")
     
     # 1. Lấy dữ liệu cơ bản từ CLI
-    video_item = get_latest_video_cli(config.BILIBILI_UID)
+    try:
+        video_item = get_latest_video_cli(config.BILIBILI_UID)
+    except Exception as e:
+        logging.error(f"{C_TAG} {C_ERR}Lỗi khi fetch video từ CLI: {e}{C_END}")
+        logging.warning(f"{C_TAG} ⚠️ Bỏ qua lần check này, giữ nguyên state để lần sau check lại.")
+        return
     if not video_item: return
 
     current_bvid = video_item.get('bvid', '') or video_item.get('id', '')
