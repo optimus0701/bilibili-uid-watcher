@@ -43,20 +43,33 @@ async def check_bilibili_opus(bot):
     channel = bot.get_channel(config.CHANNEL_ID)
     if not channel: return
 
+    logging.info(f"{C_TAG} 🔍 Đang gọi API Feed để check Opus mới...")
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(API_URL, headers=HEADERS, timeout=10) as response:
                 if response.status != 200:
+                    error_text = await response.text()
+                    logging.error(f"{C_TAG} {C_ERR}Lỗi HTTP {response.status} khi gọi API Opus:{C_END}\n{error_text[:500]}")
                     await send_error_alert(bot, f"HTTP Status {response.status}")
                     return
                 
-                data = await response.json()
+                try:
+                    data = await response.json()
+                except Exception as e:
+                    error_text = await response.text()
+                    logging.error(f"{C_TAG} {C_ERR}Không thể parse JSON từ API Opus. Có thể bị limit. Response ({len(error_text)} chars):{C_END}\n{error_text[:800]}")
+                    await send_error_alert(bot, f"Parse JSON Error: Có thể bị limit (xem console log).")
+                    return
+
                 if data.get("code") != 0:
+                    logging.error(f"{C_TAG} {C_ERR}Lỗi API Code: {data.get('code')} - {data.get('message')}{C_END}")
                     await send_error_alert(bot, f"API Error Code: {data.get('code')} - {data.get('message')}")
                     return
 
                 items = data.get("data", {}).get("items", [])
-                if not items: return
+                if not items: 
+                    logging.warning(f"{C_TAG} ⚠️ Không tìm thấy bài viết Opus nào (items rỗng hoặc bị ẩn).")
+                    return
                 
                 # Lấy bài viết đầu tiên
                 latest_post = items[0]
@@ -87,6 +100,7 @@ async def check_bilibili_opus(bot):
                     ai_image_urls.append(raw_cover_url)
 
         except Exception as e:
+            logging.error(f"{C_TAG} {C_ERR}Exception hệ thống khi gọi API Feed Opus: {e}{C_END}")
             await send_error_alert(bot, f"Exception khi gọi API Feed: {e}")
             return
 

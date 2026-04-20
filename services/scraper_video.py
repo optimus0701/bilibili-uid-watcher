@@ -1,6 +1,8 @@
 import logging
 import json
 import subprocess
+import random
+import time
 import aiohttp
 import discord
 from core import config
@@ -18,24 +20,71 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36"
 }
 
-def get_latest_video_cli(uid):
-    """Chỉ dùng CLI để lấy BVID mới nhất. Trả về dict video, None nếu không có data, hoặc raise Exception nếu lỗi CLI."""
-    logging.info(f"{C_TAG} 🔍 Đang gọi lệnh bili CLI để lấy bvid video...")
-    result = subprocess.run(['bili', 'user-videos', str(uid), '--max', '1', '--json'], capture_output=True, text=True, check=True)
-    
-    if not result.stdout.strip(): return None
-        
-    data = json.loads(result.stdout)
+def get_latest_video_cli(uid, retries=1):
+    """Chỉ dùng CLI để lấy BVID mới nhất. Có xử lý retry nếu bị limit (lỗi 412) hoặc lỗi parse."""
+    for attempt in range(retries + 1):
+        try:
+            logging.info(f"{C_TAG} 🔍 Đang gọi lệnh bili CLI để lấy bvid video... (Lần {attempt + 1})")
+            random_max = str(random.randint(2, 5))
+            
+            # Không dùng check=True để có thể bắt được stdout/stderr khi lỗi
+            result = subprocess.run(
+                ['bili', 'user-videos', str(uid), '--max', random_max, '--json'], 
+                capture_output=True, text=True
+            )
+            
+            # Check lỗi hệ thống hoặc CLI trả về exit code khác 0
+            if result.returncode != 0:
+                logging.error(f"{C_TAG} {C_ERR}CLI trả về lỗi (code {result.returncode}){C_END}")
+                if "412" in result.stdout or "412" in result.stderr or "安全风控策略" in result.stdout:
+                    logging.warning(f"{C_TAG} ⚠️ Phát hiện bị limit (lỗi 412 Bilibili).")
+                    logging.debug(f"{C_TAG} {C_ERR}Response:\n{result.stdout.strip()[:500]}{C_END}")
+                else:
+                    logging.error(f"{C_TAG} {C_ERR}STDOUT: {result.stdout.strip()[:300]}{C_END}")
+                    logging.error(f"{C_TAG} {C_ERR}STDERR: {result.stderr.strip()[:300]}{C_END}")
+                
+                if attempt < retries:
+                    logging.info(f"{C_TAG} ⏳ Đang đợi 3s để thử lại...")
+                    time.sleep(3)
+                    continue
+                else:
+                    logging.error(f"{C_TAG} {C_ERR}Đã thử lại nhưng vẫn thất bại.{C_END}")
+                    return None
 
-    if isinstance(data, list) and len(data) > 0: 
-        return data[0]
-    elif isinstance(data, dict):
-        if 'data' in data and isinstance(data['data'], list) and len(data['data']) > 0:
-            return data['data'][0]
-        elif 'vlist' in data: 
-            return data['vlist'][0] if data['vlist'] else None
-        elif 'list' in data and 'vlist' in data['list']: 
-            return data['list']['vlist'][0] if data['list']['vlist'] else None
+            if not result.stdout.strip(): 
+                return None
+                
+            try:
+                data = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                logging.error(f"{C_TAG} {C_ERR}Không thể parse JSON từ CLI. Có thể bị limit. Response ({len(result.stdout)} chars):{C_END}")
+                logging.error(f"{C_TAG} {C_ERR}{result.stdout.strip()[:800]}{C_END}")
+                
+                if attempt < retries:
+                    logging.info(f"{C_TAG} ⏳ Đang đợi 3s để thử lại...")
+                    time.sleep(3)
+                    continue
+                else:
+                    logging.error(f"{C_TAG} {C_ERR}Đã thử lại nhưng tiếp tục nhận về dữ liệu không phải JSON.{C_END}")
+                    return None
+
+            if isinstance(data, list) and len(data) > 0: 
+                return data[0]
+            elif isinstance(data, dict):
+                if 'data' in data and isinstance(data['data'], list) and len(data['data']) > 0:
+                    return data['data'][0]
+                elif 'vlist' in data: 
+                    return data['vlist'][0] if data['vlist'] else None
+                elif 'list' in data and 'vlist' in data['list']: 
+                    return data['list']['vlist'][0] if data['list']['vlist'] else None
+            return None
+
+        except Exception as e:
+            logging.error(f"{C_TAG} {C_ERR}Lỗi không xác định khi gọi CLI: {e}{C_END}")
+            if attempt < retries:
+                time.sleep(3)
+                continue
+            return None
     return None
 
 async def fetch_video_detail(bvid):
