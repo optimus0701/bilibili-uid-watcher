@@ -37,11 +37,12 @@ intents = discord.Intents.default()
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def _wait_until_next_round_interval():
-    """Hẹn giờ theo chu kỳ CHECK_INTERVAL (vd: 9:00, 9:05)"""
+    """Hẹn giờ theo chu kỳ CHECK_INTERVAL (vd: 9:00, 9:05) tính bằng phút"""
     now = datetime.datetime.now()
     seconds_since_midnight = now.hour * 3600 + now.minute * 60 + now.second
-    remainder = seconds_since_midnight % config.CHECK_INTERVAL
-    wait_seconds = config.CHECK_INTERVAL - remainder if remainder > 0 else config.CHECK_INTERVAL
+    interval_seconds = config.CHECK_INTERVAL * 60
+    remainder = seconds_since_midnight % interval_seconds
+    wait_seconds = interval_seconds - remainder if remainder > 0 else interval_seconds
     next_time = now + datetime.timedelta(seconds=wait_seconds)
     logging.info(f"⏰ Lần check tiếp theo lúc {next_time.strftime('%H:%M:%S')} (chờ {wait_seconds}s)")
     await asyncio.sleep(wait_seconds)

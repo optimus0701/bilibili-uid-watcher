@@ -9,7 +9,7 @@ LOGS_CHANNEL_ID = int(os.getenv('LOGS_CHANNEL_ID', 0))
 OWNER_ID = int(os.getenv('OWNER_ID', 0))
 ROLES_ID_STR = os.getenv('DISCORD_ROLES_ID', '')
 BILIBILI_UID = os.getenv('BILIBILI_UID', '3546856908917475')
-CHECK_INTERVAL = int(os.getenv('CHECK_INTERVAL', 300))
+CHECK_INTERVAL = int(os.getenv('CHECK_INTERVAL', 5)) # Mặc định 5 phút
 NVIDIA_API_KEY = os.getenv('NVIDIA_API_KEY')
 NVIDIA_API_URL = os.getenv('NVIDIA_API_URL', 'https://integrate.api.nvidia.com/v1/chat/completions')
 
